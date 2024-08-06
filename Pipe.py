@@ -3,21 +3,26 @@ import polars as pl
 
 def get_total_record_count(Search_query, STime, ETime):
     '''Query Splunk to get the total number of records for a given query.'''
+    count_query = f"search {Search_query} | stats count as total_count"
+    
     kwargs_search = {
         "earliest_time": STime,
         "latest_time": ETime,
-        "count": 1  # We only need a count, not the actual data
+        "count": 0  # We don't need any actual results, just the count
     }
     
-    job = service.jobs.create(Search_query, **kwargs_search)
+    job = service.jobs.create(count_query, **kwargs_search)
     
     while not job.is_done():
         pass
     
     search_results = job.results(count=1)
+    result_data = [result for result in results.ResultsReader(search_results)]
     
-    # Assuming the job results include a field for total records (adjust as needed)
-    total_count = int(job["resultCount"])
+    if result_data:
+        total_count = int(result_data[0]["total_count"])
+    else:
+        total_count = 0  # If no data is found, default to 0
     
     job.cancel()
     
